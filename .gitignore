@@ -1,0 +1,5 @@
+venv
+tmp
+test_img_dir
+logs
+.idea
