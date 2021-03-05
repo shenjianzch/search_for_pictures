@@ -21,7 +21,9 @@ def thread_train(r, file_path, table_name=DEFAULT_TABLE, *args):
     print('开始提取了')
     try:
         feat, img_name = feature_extract(file_path, VGGNet())
-        curd(feat, img_name, r, table_name)
+        val = curd(feat, img_name, r, table_name)
+        # 内存会一直累加 直到爆满
+        return val
     except Exception as e:
         logging.error(e)
         return '图片特征提取出错'.format(e)
