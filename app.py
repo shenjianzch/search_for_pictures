@@ -35,8 +35,8 @@ input_shape = (224, 224, 3)
 app = Flask(__name__)
 model = None
 r = None
-graph = None
 mongoCol = None
+graph = None
 
 
 def load_mode():
@@ -45,10 +45,7 @@ def load_mode():
     global model
     global r
     global mongoCol
-    model = VGG16(weights='imagenet',
-                  input_shape=input_shape,
-                  pooling='max',
-                  include_top=False)
+    model = VGGNet(sess, graph)
     r = redis.Redis(host=REDIS_URI, port=REDIS_PORT, decode_responses=True)
     mongo_client = pymongo.MongoClient(host='localhost', port=27017)
     mongodb = mongo_client[REDIS_NAME]
@@ -94,7 +91,7 @@ def upload_img():
     file_path = os.path.join(UPLOAD_PATH, filename)
     file.save(file_path)
     # print(file_path, 'file_path')
-    feat, img_name = feature_extract(file_path, VGGNet())
+    feat, img_name = feature_extract(file_path, model)
     curd(feat, img_name, r)
     # print(feat, img_name, 'lallalala')
     return 'ok', 200

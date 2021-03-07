@@ -3,7 +3,6 @@ from common.config import IMG_TYPE
 
 
 def feature_extract(img_path, model):
-    model = model
     feats = []
     feat = model.vgg_extract_feat(img_path)
     image_name = os.path.split(img_path)[1]

@@ -7,6 +7,7 @@ from common.config import REDIS_NAME, REDIS_URI, REDIS_PORT, UPLOAD_PATH, DEFAUL
 
 def filter_data(vids):
     r = redis.Redis(host=REDIS_URI, port=REDIS_PORT, decode_responses=True)
+    print(dir(r),'11111')
     res = []
     for i in vids:
         val = r.hget(REDIS_NAME,i)

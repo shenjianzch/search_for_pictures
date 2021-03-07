@@ -9,7 +9,6 @@ from common.config import DEFAULT_TABLE
 
 
 def thread_do(worker_num, filepath, r, *args):
-    print(r)
     with ThreadPoolExecutor(max_workers=worker_num) as t:
         img_list = filter_img(filepath)
         for img in img_list:
@@ -22,7 +21,6 @@ def thread_train(r, file_path, table_name=DEFAULT_TABLE, *args):
     try:
         feat, img_name = feature_extract(file_path, VGGNet())
         val = curd(feat, img_name, r, table_name)
-        # 内存会一直累加 直到爆满
         return val
     except Exception as e:
         logging.error(e)
