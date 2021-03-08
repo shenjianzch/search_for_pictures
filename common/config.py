@@ -11,4 +11,6 @@ REDIS_PORT = os.getenv("REDIS_PORT", 6379)
 IMG_TYPE = ["jpg", "png", "jpeg"]
 THREAD_NUM = os.getenv("THREAD_NUM", 20)
 MONGODB_COLLECTION_NAME = 'HCLC'
+MONGODB_URI = os.getenv('MONGODB_URI', '192.168.70.198')
+MONGODB_PORT = os.getenv('MONGODB_PORT', 27017)
 

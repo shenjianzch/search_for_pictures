@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 from tensorflow.python.keras.backend import set_session
 import tensorflow as tf
 from encoder.utils import feature_extract
-from common.config import REDIS_NAME, REDIS_URI, REDIS_PORT, UPLOAD_PATH, DEFAULT_TABLE, THREAD_NUM, MONGODB_COLLECTION_NAME
+from common.config import REDIS_NAME, REDIS_URI, REDIS_PORT, UPLOAD_PATH, DEFAULT_TABLE, THREAD_NUM, MONGODB_COLLECTION_NAME, MONGODB_URI, MONGODB_PORT
 from service.train import curd
 from service.search import op_search
 from service.delete import delete_collection
@@ -47,15 +47,16 @@ def load_mode():
     global mongoCol
     model = VGGNet(sess, graph)
     r = redis.Redis(host=REDIS_URI, port=REDIS_PORT, decode_responses=True)
-    mongo_client = pymongo.MongoClient(host='localhost', port=27017)
+    mongo_client = pymongo.MongoClient(host=MONGODB_URI, port=MONGODB_PORT)
+    # REDIS_NAME 直接拿来用了 通用下
     mongodb = mongo_client[REDIS_NAME]
     mongoCol = mongodb[MONGODB_COLLECTION_NAME]
 
 
 @app.route('/')
 def index():
-    list = mongoCol.find()
-    return Response(json_util.dumps(list),mimetype='application/json')
+    list = mongoCol.find({"img":"5eb66a8c00cf891cabb302ad.jpg"})
+    return Response(json_util.dumps(list), mimetype='application/json')
 
 
 @app.route('/import_zip', methods=['post'])
@@ -78,7 +79,7 @@ def import_zip():
     os.remove(path)
     # 开始处理压缩包里的图片
     img_dir_path = os.path.join(UPLOAD_PATH, filename.split('.')[0])
-    thread_do(THREAD_NUM, img_dir_path, r)
+    thread_do(THREAD_NUM, img_dir_path, mongoCol, model)
     print('开始图片提取特征值了')
     return jsonify({'success': True})
 
@@ -90,9 +91,12 @@ def upload_img():
     filename = secure_filename(file.filename)
     file_path = os.path.join(UPLOAD_PATH, filename)
     file.save(file_path)
-    # print(file_path, 'file_path')
+    count = mongoCol.find({'img': filename}).count()
+    if count > 0:
+        return '图片名称已存在', 400
     feat, img_name = feature_extract(file_path, model)
-    curd(feat, img_name, r)
+    # 放弃使用redis 改用mongodb
+    curd(feat, img_name, mongoCol)
     # print(feat, img_name, 'lallalala')
     return 'ok', 200
 
@@ -117,8 +121,11 @@ def search_img():
     filename = secure_filename(file.name)
     file_path = os.path.join(UPLOAD_PATH, filename)
     file.save(file_path)
-    res_id, res_distance = op_search(table_name, file_path, top_k, model, graph, sess)
-    return jsonify(res_id), 200
+    res_id, res_distance = op_search(table_name, file_path, int(top_k), model, graph, sess, mongoCol)
+    res = []
+    for item in range(len(res_id)):
+        res.append({"img": res_id[item], "distance": res_distance[item]})
+    return jsonify(res), 200
 
 
 @app.route('/collection/<table>', methods=['delete'])

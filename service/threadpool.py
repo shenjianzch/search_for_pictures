@@ -8,19 +8,19 @@ from encoder.utils import filter_img
 from common.config import DEFAULT_TABLE
 
 
-def thread_do(worker_num, filepath, r, *args):
+def thread_do(worker_num, filepath, mycol, model, *args):
     with ThreadPoolExecutor(max_workers=worker_num) as t:
         img_list = filter_img(filepath)
         for img in img_list:
-            f = t.submit(thread_train, r, img)
+            f = t.submit(thread_train, mycol, img, model)
     # executor.submit(thread_train, *args)
 
 
-def thread_train(r, file_path, table_name=DEFAULT_TABLE, *args):
+def thread_train(mycol, file_path, model, table_name=DEFAULT_TABLE, *args):
     print('开始提取了')
     try:
-        feat, img_name = feature_extract(file_path, VGGNet())
-        val = curd(feat, img_name, r, table_name)
+        feat, img_name = feature_extract(file_path, model)
+        val = curd(feat, img_name, mycol, table_name)
         return val
     except Exception as e:
         logging.error(e)
