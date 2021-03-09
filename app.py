@@ -20,7 +20,7 @@ from service.threadpool import thread_do
 from encoder.utils import filter_img
 from service.count import count_tab
 from service.partition import create_p
-from service.common import collection_info, create_collection
+from service.common import collection_info, create_collection, get_collections, get_partitions_list
 import zipfile
 # tensorflow 的设置
 config = tf.ConfigProto()
@@ -61,6 +61,10 @@ def index():
 
 @app.route('/import_zip', methods=['post'])
 def import_zip():
+    args = reqparse.RequestParser().\
+        add_argument('table', type=str).\
+        add_argument('partition', type=str).\
+        parse_args()
     file = request.files.get('file')
     if not file:
         return '参数file必填', 400
@@ -79,7 +83,7 @@ def import_zip():
     os.remove(path)
     # 开始处理压缩包里的图片
     img_dir_path = os.path.join(UPLOAD_PATH, filename.split('.')[0])
-    thread_do(THREAD_NUM, img_dir_path, mongoCol, model)
+    thread_do(THREAD_NUM, img_dir_path, mongoCol, model, args['partition'], args['table'])
     print('开始图片提取特征值了')
     return jsonify({'success': True})
 
@@ -87,6 +91,10 @@ def import_zip():
 # os.listdir 列出目录路径
 @app.route('/upload', methods=['POST'])
 def upload_img():
+    args = reqparse.RequestParser().\
+        add_argument('table', type=str).\
+        add_argument('partition',type=str).\
+        parse_args()
     file = request.files.get('file')
     filename = secure_filename(file.filename)
     file_path = os.path.join(UPLOAD_PATH, filename)
@@ -96,16 +104,19 @@ def upload_img():
         return '图片名称已存在', 400
     feat, img_name = feature_extract(file_path, model)
     # 放弃使用redis 改用mongodb
-    curd(feat, img_name, mongoCol)
+    bool, val = curd(feat, img_name, mongoCol, args['partition'], args['table'])
     # print(feat, img_name, 'lallalala')
-    return 'ok', 200
+    if bool:
+        return 'ok', 200
+    return '出错了', 400
 
 
 @app.route('/search', methods=['post'])
 def search_img():
     args = reqparse.RequestParser().\
         add_argument('table', type=str).\
-        add_argument('num').\
+        add_argument('num', type=str). \
+        add_argument('partition', type=str). \
         parse_args()
     table_name = args['table']
     top_k = args['num']
@@ -121,7 +132,9 @@ def search_img():
     filename = secure_filename(file.name)
     file_path = os.path.join(UPLOAD_PATH, filename)
     file.save(file_path)
-    res_id, res_distance = op_search(table_name, file_path, int(top_k), model, graph, sess, mongoCol)
+    bool, res_id, res_distance = op_search(table_name, file_path, int(top_k), model, graph, sess, mongoCol, args['partition'])
+    if not bool:
+        return '分区不存在', 400
     res = []
     for item in range(len(res_id)):
         res.append({"img": res_id[item], "distance": res_distance[item]})
@@ -201,7 +214,31 @@ def get_collection_info():
         return status.message, 400
 
 
+@app.route('/collection_list', methods=['get'])
+def get_table_list():
+    status, info = get_collections()
+    print(status, info)
+    if status.code == 0:
+        return jsonify(info), 200
+    return status.message, 400
+
+
+@app.route('/partitions_list',methods=['get'])
+def get_list_partitions():
+    args = reqparse.RequestParser().\
+        add_argument('table', type=str). \
+        parse_args()
+    if not args['table']:
+        return '表字段必填', 400
+    hastable, status, info = get_partitions_list(args['table'])
+    if not hastable:
+        return '表不存在', 400
+    if status.code == 0:
+        return Response(json.dumps(info, default=lambda obj: obj.__dict__), mimetype='application/json'), 200
+    return status.message, 400
+
+
+load_mode()
 if __name__ == '__main__':
-    load_mode()
     app.run(host="0.0.0.0", port='6060')
 

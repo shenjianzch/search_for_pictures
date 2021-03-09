@@ -26,12 +26,12 @@ def create_table(client, table_name=None, dimension=DIMENSION,
         log.error(e)
 
 
-def insert_vectors(client, table_name, vectors):
+def insert_vectors(client, table_name, vectors, partition_tag=None):
     if not client.has_collection(collection_name=table_name):
         log.error("集合 %s 不存在", table_name)
         return
     try:
-        status, ids = client.insert(collection_name=table_name, records=vectors)
+        status, ids = client.insert(collection_name=table_name, records=vectors, partition_tag=partition_tag)
         return status, ids
     except Exception as e:
         log.error(e)
@@ -63,7 +63,6 @@ def has_table(client, table_name):
 
 
 def count_table(client, table_name):
-    print(dir(client), 'fffff')
     status, num = client.count_entities(collection_name=table_name)
     return num
 
@@ -85,4 +84,20 @@ def get_collection_info(client, table_name):
     return status, info
 
 
+# 获取table 列表
+def get_table_list(client):
+    status, info = client.list_collections()
+    return status, info
+
+
+# 获取某个表的分区列表
+def get_list_partitions(client, table_name):
+    status, info = client.list_partitions(table_name)
+    return status, info
+
+
+# 查看是否有分区
+def has_partition(client, table_name, partition):
+    status, info = client.has_partition(table_name, partition)
+    return status, info
 
