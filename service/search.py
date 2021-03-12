@@ -6,13 +6,14 @@ from common.config import REDIS_NAME, REDIS_URI, REDIS_PORT, UPLOAD_PATH, DEFAUL
 from bson import json_util
 
 
-def filter_data(vids, mycol):
-    # 更改查询方式 走mongodb 放弃redis
-    # r = redis.Redis(host=REDIS_URI, port=REDIS_PORT, decode_responses=True)
+def filter_data(vids, mycol, vectors):
     res = []
     list = mycol.find({"id": {"$in": vids}}, {"_id": 0})
     for i in list:
-        res.append(i['img'])
+        for d in vectors:
+            # print(i,d,'iuio')
+            if d.id == i['id']:
+                res.append({'img': i['img'], 'distance': d.distance})
     return res
 
 
@@ -24,14 +25,16 @@ def op_search(table_name, img_path, top_k, model, graph, sess, mycol, partition=
         if partition:
             status, ok = has_partition(client, table_name, partition)
             if not ok:
-                return False, '', ''
+                return False, ''
         feat = vgg_extract_feat(img_path, model, graph, sess)
         feats.append(feat)
         _, vectors = search_vectors(client, table_name, feats, top_k, partition)
         vids = [x.id for x in vectors[0]]
-        res_id = filter_data(vids, mycol)
-        res_distance = [x.distance for x in vectors[0]]
-        return True, res_id, res_distance
+        print(vectors, 'vectors[0]')
+        # res_id = filter_data(vids, mycol)
+        # res_distance = [x.distance for x in vectors[0]]
+        res = filter_data(vids, mycol, vectors[0])
+        return True, res
     except Exception as e:
         logging.error(e)
         return '发生错误'.format(e)

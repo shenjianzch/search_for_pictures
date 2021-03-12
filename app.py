@@ -59,6 +59,14 @@ def index():
     return Response(json_util.dumps(list), mimetype='application/json')
 
 
+@app.route('/data/<image_name>')
+def image_path(image_name):
+    file_name = UPLOAD_PATH + '/showroom/showroom/' + image_name
+    if os.path.exists(file_name):
+        return send_file(file_name)
+    return "file not exist"
+
+
 @app.route('/import_zip', methods=['post'])
 def import_zip():
     args = reqparse.RequestParser().\
@@ -71,20 +79,24 @@ def import_zip():
     filename = secure_filename(file.filename)
     path = os.path.join(UPLOAD_PATH, filename)
     file.save(path)
-    print(filename.split('.')[0])
     zip_file = zipfile.ZipFile(path)
+    imgdir = os.path.join(UPLOAD_PATH, filename.split('.')[0])
+    if not os.path.exists(imgdir):
+        os.mkdir(imgdir)
     zip_list = zip_file.namelist()
     for names in zip_list:
         if names[0] == '_':
             continue
-        zip_file.extract(names, UPLOAD_PATH)
+        # print(names, 'names')
+        if names.endswith('/'):
+            continue
+        zip_file.extract(names, imgdir)
     zip_file.close()
     # 删除压缩包
     os.remove(path)
     # 开始处理压缩包里的图片
-    img_dir_path = os.path.join(UPLOAD_PATH, filename.split('.')[0])
-    thread_do(THREAD_NUM, img_dir_path, mongoCol, model, args['partition'], args['table'])
-    print('开始图片提取特征值了')
+    thread_do(THREAD_NUM, imgdir, mongoCol, model, args['partition'], args['table'])
+    print('图片提取特征值结束了')
     return jsonify({'success': True})
 
 
@@ -132,13 +144,13 @@ def search_img():
     filename = secure_filename(file.name)
     file_path = os.path.join(UPLOAD_PATH, filename)
     file.save(file_path)
-    bool, res_id, res_distance = op_search(table_name, file_path, int(top_k), model, graph, sess, mongoCol, args['partition'])
+    bool, res = op_search(table_name, file_path, int(top_k), model, graph, sess, mongoCol, args['partition'])
     if not bool:
         return '分区不存在', 400
-    res = []
-    for item in range(len(res_id)):
-        res.append({"img": res_id[item], "distance": res_distance[item]})
-    return jsonify(res), 200
+    # res = []
+    # for item in range(len(res_id)):
+    #     res.append({"img": res_id[item], "distance": res_distance[item]})
+    return jsonify(sorted(res, key=lambda x:x['distance'])), 200
 
 
 @app.route('/collection/<table>', methods=['delete'])
