@@ -59,6 +59,14 @@ def index():
     return Response(json_util.dumps(list), mimetype='application/json')
 
 
+@app.route('/get_all_imgs')
+def get_all_img():
+    imgs = mongoCol.find({},{"_id":0})
+    # for img in imgs:
+    #     print(img)
+    return Response(json_util.dumps(imgs), mimetype='application/json')
+
+
 @app.route('/data/<image_name>')
 def image_path(image_name):
     file_name = UPLOAD_PATH + '/showroom/showroom/' + image_name
