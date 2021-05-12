@@ -11,14 +11,12 @@ def filter_data(vids, mycol, vectors):
     list = mycol.find({"id": {"$in": vids}}, {"_id": 0})
     for i in list:
         for d in vectors:
-            # print(i,d,'iuio')
             if d.id == i['id']:
                 res.append({'img': i['img'], 'distance': d.distance})
     return res
 
 
 def op_search(table_name, img_path, top_k, model, graph, sess, mycol, partition=None):
-    print(top_k,'top_k')
     try:
         feats = []
         client = milvus_client()
@@ -29,12 +27,12 @@ def op_search(table_name, img_path, top_k, model, graph, sess, mycol, partition=
         feat = vgg_extract_feat(img_path, model, graph, sess)
         feats.append(feat)
         _, vectors = search_vectors(client, table_name, feats, top_k, partition)
-        vids = [x.id for x in vectors[0]]
-        print(vectors, 'vectors[0]')
-        # res_id = filter_data(vids, mycol)
-        # res_distance = [x.distance for x in vectors[0]]
-        res = filter_data(vids, mycol, vectors[0])
-        return True, res
+        if len(vectors) > 0:
+            vids = [x.id for x in vectors[0]]
+            res = filter_data(vids, mycol, vectors[0])
+            return True, res
+        else:
+            return True, vectors
     except Exception as e:
         logging.error(e)
         return '发生错误'.format(e)

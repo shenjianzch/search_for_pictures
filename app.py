@@ -15,7 +15,7 @@ from encoder.utils import feature_extract
 from common.config import REDIS_NAME, REDIS_URI, REDIS_PORT, UPLOAD_PATH, DEFAULT_TABLE, THREAD_NUM, MONGODB_COLLECTION_NAME, MONGODB_URI, MONGODB_PORT
 from service.train import curd
 from service.search import op_search
-from service.delete import delete_collection
+from service.delete import delete_collection, delete_imgs
 from service.threadpool import thread_do
 from encoder.utils import filter_img
 from service.count import count_tab
@@ -170,6 +170,25 @@ def delete_index(table):
         return '数据集合不存在', 400
     if status:
         return 'ok', 200
+
+
+@app.route('/delete_img', methods=['delete'])
+def delete_img_entity():
+    args = reqparse.RequestParser().\
+        add_argument('table', type=str).\
+        add_argument('imgs',type=str, action='append',required=True). \
+        parse_args()
+    table = args['table']
+    if not table:
+        return '表名必须', 400
+    if args['imgs'] is None:
+        return 'imgs参数错误', 400
+    print(type(args['imgs']),'args')
+    blen, msg = delete_imgs(table, args['imgs'], mongoCol)
+    if blen:
+        return 'ok', 200
+    else:
+        return msg, 400
 
 
 @app.route('/collection', methods=['post'])

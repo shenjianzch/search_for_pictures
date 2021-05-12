@@ -101,3 +101,10 @@ def has_partition(client, table_name, partition):
     status, info = client.has_partition(table_name, partition)
     return status, info
 
+
+# 删除图片向量
+def delete_entity(client, table_name, ids):
+    status = client.delete_entity_by_id(collection_name=table_name, id_array=ids)
+    client.flush()
+    print(status,'milvus')
+    return status
