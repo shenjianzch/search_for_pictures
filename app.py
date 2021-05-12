@@ -118,6 +118,7 @@ def upload_img():
     file = request.files.get('file')
     filename = secure_filename(file.filename)
     file_path = os.path.join(UPLOAD_PATH, filename)
+    print(filename,file_path,'文件。。。。')
     file.save(file_path)
     count = mongoCol.find({'img': filename}).count()
     if count > 0:
