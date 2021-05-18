@@ -128,7 +128,7 @@ def upload_img():
     logging.info(filename)
     count = mongoCol.find({'img': filename}).count()
     if count > 0:
-        return '图片名称已存在', 400
+        return 'ok', 200
     feat, img_name = feature_extract(file_path, model)
     # 放弃使用redis 改用mongodb
     bool, val = curd(feat, img_name, mongoCol, args['partition'], args['table'])
