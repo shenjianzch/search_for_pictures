@@ -42,7 +42,7 @@ def delete_imgs(table_name, ids, mycol):
                 if dstatus.code == 0:
                     return True, '删除成功'
             else:
-                return False, '该图片未进行索引或已被删除'
+                return True, '该图片未进行索引或已被删除'
     except Exception as e:
         logging.error(e)
         return False

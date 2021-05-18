@@ -21,7 +21,7 @@ def curd(vectors, img_name, mycol, partition=None, table_name=DEFAULT_TABLE):
         status, id = insert_vectors(client, table_name, vectors, partition)
         # 存入缓存 以便后续进行反查
         # redis.hset(REDIS_NAME, id[0], img_name)
-        mycol.insert_one({'id': id[0], 'img': img_name})
+        mycol.insert_one({'id': id[0], 'img': img_name, 'table': table_name})
         create_index(client, table_name)
         print('OK 了')
         return True, ''

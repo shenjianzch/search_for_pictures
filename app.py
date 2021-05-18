@@ -1,5 +1,6 @@
 from flask import Flask,request, send_file, jsonify,Response
 from flask_restful import reqparse
+import logging
 import redis
 import pymongo
 import os
@@ -61,7 +62,12 @@ def index():
 
 @app.route('/get_all_imgs')
 def get_all_img():
-    imgs = mongoCol.find({},{"_id":0})
+    args = reqparse.RequestParser().\
+        add_argument('table', type=str).parse_args()
+    table = args['table']
+    if not table:
+        return '参数错误', 400
+    imgs = mongoCol.find({"table": table}, {"_id": 0})
     # for img in imgs:
     #     print(img)
     return Response(json_util.dumps(imgs), mimetype='application/json')
@@ -118,15 +124,14 @@ def upload_img():
     file = request.files.get('file')
     filename = secure_filename(file.filename)
     file_path = os.path.join(UPLOAD_PATH, filename)
-    print(filename,file_path,'文件。。。。')
     file.save(file_path)
+    logging.info(filename)
     count = mongoCol.find({'img': filename}).count()
     if count > 0:
         return '图片名称已存在', 400
     feat, img_name = feature_extract(file_path, model)
     # 放弃使用redis 改用mongodb
     bool, val = curd(feat, img_name, mongoCol, args['partition'], args['table'])
-    # print(feat, img_name, 'lallalala')
     if bool:
         return 'ok', 200
     return '出错了', 400
@@ -180,6 +185,7 @@ def delete_img_entity():
         add_argument('imgs',type=str, action='append',required=True). \
         parse_args()
     table = args['table']
+    print(table,args['imgs'],"args['imgs']")
     if not table:
         return '表名必须', 400
     if args['imgs'] is None:
